@@ -1,5 +1,5 @@
 from langchain_community.utilities import SQLDatabase
-from core.settings import settings
+from app.core.settings import settings
 
 DATABASE_URL = (
     f"mysql+mysqlconnector://{settings.DB_USER}:{settings.DB_PASSWORD}"
@@ -11,9 +11,5 @@ class DatabaseService:
         self.db = SQLDatabase.from_uri(DATABASE_URL)
         
     def get_db(self): 
-        return { 
-                "db": self.db, 
-                "table_names": self.db.get_table_names(), 
-                "dialect": self.db.dialect 
-            }    
+        return self.db 
     

@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from core.settings import settings 
-from api.routes.chatbot import router as chatbot_router 
+from app.core.settings import settings 
+from app.api.routes.chatbot import router as chatbot_router 
 
 app = FastAPI(
     title="Chatbot with LangChain and FastAPI", 
@@ -22,5 +22,5 @@ app.include_router(chatbot_router, prefix="/chatbot", tags=["chatbot"])
 
 
 @app.get('/')
-def root(): 
-    return {"message": settings.MODEL_NAME}
+def root():     
+    return {"message": "Welcome to the chatbot API! we are using {} model".format(settings.MODEL_NAME)}

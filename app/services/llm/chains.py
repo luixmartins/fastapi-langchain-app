@@ -5,11 +5,17 @@ from .template import PromptTemplates
 from .factory import ChatModelFactory 
 
 from ..database import DatabaseService 
+from app.utils.clean_sql_queries import CleanSqlQuery 
 
 
 class State(TypedDict): 
     """
-    State object for chains.
+    State is a TypedDict that represents the structure of data used in the context of a language model chain.
+    Attributes:
+        question (str): The question posed by the user or system.
+        query (str): The processed query sent to the language model.
+        result (str): The raw result returned by the language model.
+        answer (str): The final answer derived from the language model's result.
     """
     question: str
     query: str 
@@ -17,52 +23,13 @@ class State(TypedDict):
     answer: str 
     
 class QueryOutput(TypedDict): 
-
+    """
+    QueryOutput is a TypedDict that represents the structure of a dictionary containing
+    a syntactically valid SQL query.
+    Attributes:
+        query (str): A string representing a syntactically valid SQL query.
+    """
     query: Annotated[str, ..., "Syntactically valid SQL query"] 
-    
-class ChainFactory(State): 
-    def __init_subclass__(cls):
-        return super().__init_subclass__()    
-        
-    def write_query(self, state: State): 
-        """Generate SQL query to fetch information."""
-        
-        
-        
-        query_prompt_template = PromptTemplates().query_prompt()
-        
-        prompt = query_prompt_template.invoke(
-            {
-                "dialect": self.db['dialect'],
-                "top_k": 10,
-                "table_info": self.db['table_names'],
-                "input": state["question"],
-            }
-        )
-        structured_llm = self.llm.with_structured_output(QueryOutput)
-        result = structured_llm.invoke(prompt)
-        
-        return {"query": result["query"]}
-    
-    def execute_query(self, state: State):
-        """Execute SQL query."""
-        execute_query_tool = QuerySQLDatabaseTool(db=self.db)
-        
-        return {"result": execute_query_tool.invoke(state["query"])}
-    
-    def generate_answer(self, state: State): 
-        """Answer question using retrieved information as context."""
-        prompt = (
-            "Given the following user question, corresponding SQL query, "
-            "and SQL result, answer the user question.\n\n"
-            f"Question: {state['question']}\n"
-            f"SQL Query: {state['query']}\n"
-            f"SQL Result: {state['result']}"
-        )
-        response = self.llm.invoke(prompt)
-        
-        return {"answer": response.content}
-
 class ChainFactory:
     """
     A factory class for creating and managing the execution of a chain of operations 
@@ -97,14 +64,16 @@ class ChainFactory:
         query_prompt_template = PromptTemplates().query_prompt()
         
         prompt = query_prompt_template.invoke({
-            "dialect": self.db['dialect'],
-            "top_k": 10,
-            "table_info": self.db['table_names'],
-            "input": question,
-        })
+                    "dialect": self.db.dialect,
+                    "top_k": 10,
+                    "table_info": self.db.get_table_names(),  # ou self.db.table_names se existir
+                    "input": question,
+                })
         
         structured_llm = self.llm.with_structured_output(QueryOutput)
         result = structured_llm.invoke(prompt)
+        
+        #result["query"] = CleanSqlQuery.clean_sql_query(result["query"]) 
         
         return result["query"]
 
